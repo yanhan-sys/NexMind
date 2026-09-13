@@ -130,6 +130,34 @@ Value add(const Value& lhs, const Value& rhs) {
     return Value(std::move(node));
 }
 
+Value add_bias(const Value& input, const Value& bias) {
+    if (!input.node_ || !bias.node_) {
+        throw std::logic_error("Invalid autograd Value");
+    }
+    auto node = std::make_shared<Value::Node>();
+    node->data = nexmind::add_row_bias(input.node_->data, bias.node_->data);
+    node->requires_grad = input.requires_grad() || bias.requires_grad();
+    node->parents = {input.node_, bias.node_};
+    if (node->requires_grad) {
+        node->grad = zeros_like(node->data);
+    }
+    node->backward = [input_node = input.node_, bias_node = bias.node_](Value::Node& self) {
+        if (input_node->requires_grad) {
+            add_inplace(input_node->grad, self.grad);
+        }
+        if (bias_node->requires_grad) {
+            Tensor bias_grad(bias_node->data.shape(), 0.0);
+            for (std::size_t row = 0; row < self.grad.shape()[0]; ++row) {
+                for (std::size_t column = 0; column < self.grad.shape()[1]; ++column) {
+                    bias_grad.at({0, column}) += self.grad.at({row, column});
+                }
+            }
+            add_inplace(bias_node->grad, bias_grad);
+        }
+    };
+    return Value(std::move(node));
+}
+
 Value multiply(const Value& lhs, const Value& rhs) {
     if (!lhs.node_ || !rhs.node_) {
         throw std::logic_error("Invalid autograd Value");
@@ -243,8 +271,6 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
             return;
         }
         Tensor grad = probabilities;
-        const std::size_t classes = grad.shape()[1];
-        (void)classes;
         for (std::size_t row = 0; row < batch; ++row) {
             grad.at({row, targets[row]}) -= 1.0;
         }

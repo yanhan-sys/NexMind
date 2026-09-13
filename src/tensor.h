@@ -38,6 +38,7 @@ private:
 };
 
 Tensor add(const Tensor& lhs, const Tensor& rhs);
+Tensor add_row_bias(const Tensor& input, const Tensor& bias);
 Tensor multiply(const Tensor& lhs, const Tensor& rhs);
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
 Tensor transpose_2d(const Tensor& input);

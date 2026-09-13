@@ -22,7 +22,7 @@ public:
     Parameter& bias() noexcept { return bias_; }
     const Parameter& bias() const noexcept { return bias_; }
 
-    std::vector<Parameter*> parameters() noexcept override;
+    std::vector<Parameter*> parameters() override;
 
 private:
     std::size_t in_features_;

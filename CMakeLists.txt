@@ -7,17 +7,33 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(NEXMIND_BUILD_TESTS "Build NexMind tests" ON)
 
+add_library(nexmind_core
+    src/tensor.cpp
+    src/tensor.h
+)
+
+target_compile_features(nexmind_core PUBLIC cxx_std_17)
+
+target_include_directories(nexmind_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 add_executable(nexmind
     src/main.cpp
 )
 
-target_compile_features(nexmind PRIVATE cxx_std_17)
+target_link_libraries(nexmind PRIVATE nexmind_core)
 
-target_include_directories(nexmind PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+target_compile_features(nexmind PRIVATE cxx_std_17)
 
 if(NEXMIND_BUILD_TESTS)
     enable_testing()
+
+    add_executable(nexmind_tensor_test
+        tests/tensor_test.cpp
+    )
+    target_link_libraries(nexmind_tensor_test PRIVATE nexmind_core)
+    target_compile_features(nexmind_tensor_test PRIVATE cxx_std_17)
+    add_test(NAME nexmind_tensor COMMAND nexmind_tensor_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

@@ -72,6 +72,19 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
     return result;
 }
 
+Tensor add_row_bias(const Tensor& input, const Tensor& bias) {
+    if (input.ndim() != 2 || bias.ndim() != 2 || bias.shape()[0] != 1 || input.shape()[1] != bias.shape()[1]) {
+        throw std::invalid_argument("Tensor row bias shape mismatch");
+    }
+    Tensor result(input.shape());
+    for (std::size_t row = 0; row < input.shape()[0]; ++row) {
+        for (std::size_t column = 0; column < input.shape()[1]; ++column) {
+            result.at({row, column}) = input.at({row, column}) + bias.at({0, column});
+        }
+    }
+    return result;
+}
+
 Tensor multiply(const Tensor& lhs, const Tensor& rhs) {
     if (lhs.shape() != rhs.shape()) {
         throw std::invalid_argument("Tensor multiply shape mismatch");

@@ -179,17 +179,17 @@ Value mean(const Value& input) {
         throw std::invalid_argument("Mean requires a non-empty Tensor");
     }
     auto node = std::make_shared<Value::Node>();
-    node->data = Tensor({1}, 0.0);
-    node->data[0] = std::accumulate(input.node_->data.data(), input.node_->data.data() + input.node_->data.size(), 0.0) / static_cast<double>(input.node_->data.size());
+    node->data = Tensor({1}, std::accumulate(input.node_->data.begin(), input.node_->data.end(), 0.0) / static_cast<double>(input.node_->data.size()));
     node->requires_grad = input.requires_grad();
     node->parents = {input.node_};
     if (node->requires_grad) {
         node->grad = zeros_like(node->data);
     }
+    const double scale = 1.0 / static_cast<double>(input.node_->data.size());
     node->backward = [parent = input.node_](Value::Node& self) {
         if (parent->requires_grad) {
-            const double factor = self.grad[0] / static_cast<double>(parent->data.size());
-            add_inplace(parent->grad, Tensor(parent->data.shape(), factor));
+            Tensor grad(parent->data.shape(), self.grad[0] * scale);
+            add_inplace(parent->grad, grad);
         }
     };
     return Value(std::move(node));
@@ -199,56 +199,58 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
     if (!logits.node_ || logits.node_->data.ndim() != 2) {
         throw std::invalid_argument("Cross entropy requires a 2D logits Tensor");
     }
-    const std::size_t batch = logits.node_->data.shape()[0];
-    const std::size_t classes = logits.node_->data.shape()[1];
-    if (batch == 0 || targets.size() != batch) {
-        throw std::invalid_argument("Cross entropy target size mismatch");
+    const auto& shape = logits.node_->data.shape();
+    const std::size_t batch = shape[0];
+    const std::size_t classes = shape[1];
+    if (batch == 0 || classes == 0 || targets.size() != batch) {
+        throw std::invalid_argument("Cross entropy batch or target shape mismatch");
     }
+    for (std::size_t i = 0; i < batch; ++i) {
+        if (targets[i] >= classes) {
+            throw std::out_of_range("Cross entropy target out of range");
+        }
+    }
+
     auto node = std::make_shared<Value::Node>();
-    node->data = Tensor({1}, 0.0);
+    Tensor probabilities(shape, 0.0);
+    double loss = 0.0;
+    for (std::size_t row = 0; row < batch; ++row) {
+        double max_logit = -std::numeric_limits<double>::infinity();
+        for (std::size_t col = 0; col < classes; ++col) {
+            max_logit = std::max(max_logit, logits.node_->data.at({row, col}));
+        }
+        double sum_exp = 0.0;
+        for (std::size_t col = 0; col < classes; ++col) {
+            const double value = std::exp(logits.node_->data.at({row, col}) - max_logit);
+            probabilities.at({row, col}) = value;
+            sum_exp += value;
+        }
+        for (std::size_t col = 0; col < classes; ++col) {
+            probabilities.at({row, col}) /= sum_exp;
+        }
+        loss += -std::log(probabilities.at({row, targets[row]}));
+    }
+    loss /= static_cast<double>(batch);
+    node->data = Tensor({1}, loss);
     node->requires_grad = logits.requires_grad();
     node->parents = {logits.node_};
     if (node->requires_grad) {
         node->grad = zeros_like(node->data);
     }
-
-    std::vector<double> probabilities(batch * classes);
-    double loss = 0.0;
-    for (std::size_t i = 0; i < batch; ++i) {
-        if (targets[i] >= classes) {
-            throw std::out_of_range("Cross entropy target out of range");
-        }
-        double maximum = -std::numeric_limits<double>::infinity();
-        for (std::size_t j = 0; j < classes; ++j) {
-            maximum = std::max(maximum, logits.node_->data.at({i, j}));
-        }
-        double sum = 0.0;
-        for (std::size_t j = 0; j < classes; ++j) {
-            probabilities[i * classes + j] = std::exp(logits.node_->data.at({i, j}) - maximum);
-            sum += probabilities[i * classes + j];
-        }
-        for (std::size_t j = 0; j < classes; ++j) {
-            probabilities[i * classes + j] /= sum;
-        }
-        loss -= std::log(std::max(probabilities[i * classes + targets[i]], 1e-300));
-    }
-    node->data[0] = loss / static_cast<double>(batch);
-    node->backward = [parent = logits.node_, probabilities = std::move(probabilities), targets, batch, classes](Value::Node& self) {
+    node->backward = [parent = logits.node_, probabilities = std::move(probabilities), targets, batch](Value::Node& self) {
         if (!parent->requires_grad) {
             return;
         }
-        Tensor gradient(parent->data.shape());
-        const double scale_factor = self.grad[0] / static_cast<double>(batch);
-        for (std::size_t i = 0; i < batch; ++i) {
-            for (std::size_t j = 0; j < classes; ++j) {
-                double value = probabilities[i * classes + j];
-                if (j == targets[i]) {
-                    value -= 1.0;
-                }
-                gradient.at({i, j}) = value * scale_factor;
-            }
+        Tensor grad = probabilities;
+        const std::size_t classes = grad.shape()[1];
+        for (std::size_t row = 0; row < batch; ++row) {
+            grad.at({row, targets[row]}) -= 1.0;
         }
-        add_inplace(parent->grad, gradient);
+        const double scale = self.grad[0] / static_cast<double>(batch);
+        for (std::size_t i = 0; i < grad.size(); ++i) {
+            grad[i] *= scale;
+        }
+        add_inplace(parent->grad, grad);
     };
     return Value(std::move(node));
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
@@ -24,16 +25,8 @@ void add_inplace(Tensor& dst, const Tensor& src) {
     }
 }
 
-Tensor scale(const Tensor& input, double factor) {
-    Tensor result(input.shape());
-    for (std::size_t i = 0; i < input.size(); ++i) {
-        result[i] = input[i] * factor;
-    }
-    return result;
-}
-
 void backward_node(const std::shared_ptr<Value::Node>& node, std::unordered_set<Value::Node*>& visited, std::vector<std::shared_ptr<Value::Node>>& order) {
-    if (!node || visited.contains(node.get())) {
+    if (!node || visited.find(node.get()) != visited.end()) {
         return;
     }
     visited.insert(node.get());
@@ -102,7 +95,12 @@ void Value::backward() {
     std::unordered_set<Node*> visited;
     std::vector<std::shared_ptr<Node>> order;
     backward_node(node_, visited, order);
-    node_->grad = Tensor(node_->data.shape(), 1.0);
+    for (const auto& current : order) {
+        if (current->requires_grad) {
+            current->grad.fill(0.0);
+        }
+    }
+    node_->grad[0] = 1.0;
     for (auto it = order.rbegin(); it != order.rend(); ++it) {
         if ((*it)->backward) {
             (*it)->backward(*it);

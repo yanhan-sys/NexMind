@@ -11,6 +11,15 @@ namespace nexmind {
 
 class Value {
 public:
+    struct Node {
+        Tensor data;
+        Tensor grad;
+        bool requires_grad = false;
+        std::string name;
+        std::vector<std::shared_ptr<Node>> parents;
+        std::function<void(Node&)> backward;
+    };
+
     Value() = default;
     explicit Value(Tensor data, bool requires_grad = false, std::string name = {});
 
@@ -24,15 +33,6 @@ public:
     void backward();
 
 private:
-    struct Node {
-        Tensor data;
-        Tensor grad;
-        bool requires_grad = false;
-        std::string name;
-        std::vector<std::shared_ptr<Node>> parents;
-        std::function<void(Node&)> backward;
-    };
-
     explicit Value(std::shared_ptr<Node> node);
     std::shared_ptr<Node> node_;
 

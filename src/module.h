@@ -9,7 +9,7 @@ namespace nexmind {
 class Module {
 public:
     virtual ~Module() = default;
-    virtual std::vector<Parameter*> parameters() noexcept = 0;
+    virtual std::vector<Parameter*> parameters() = 0;
 };
 
 } // namespace nexmind

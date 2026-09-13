@@ -1,0 +1,57 @@
+# NexMind
+
+# Build artifacts
+build/
+cmake-build-*/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.VC.db
+
+# Compiled objects and binaries
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.exe
+*.pdb
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+install_manifest.txt
+
+# Training outputs
+checkpoints/
+models/
+runs/
+logs/
+
+# Local data
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.gguf
+*.npy
+*.npz
+
+# Local configuration / secrets
+.env
+.env.*
+*.key
+*.pem
+*.secret
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

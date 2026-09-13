@@ -37,6 +37,7 @@ private:
     std::shared_ptr<Node> node_;
 
     friend Value add(const Value& lhs, const Value& rhs);
+    friend Value add_bias(const Value& input, const Value& bias);
     friend Value multiply(const Value& lhs, const Value& rhs);
     friend Value matmul(const Value& lhs, const Value& rhs);
     friend Value mean(const Value& input);
@@ -44,6 +45,7 @@ private:
 };
 
 Value add(const Value& lhs, const Value& rhs);
+Value add_bias(const Value& input, const Value& bias);
 Value multiply(const Value& lhs, const Value& rhs);
 Value matmul(const Value& lhs, const Value& rhs);
 Value mean(const Value& input);

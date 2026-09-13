@@ -18,7 +18,7 @@ Linear::Linear(std::size_t in_features, std::size_t out_features, std::uint64_t 
     const double limit = std::sqrt(6.0 / static_cast<double>(in_features + out_features));
     std::mt19937_64 generator(seed);
     std::uniform_real_distribution<double> distribution(-limit, limit);
-    for (std::size_t i = 0; i < weight_.value().size(); ++i) {
+    for (std::size_t i = 0; i < weight_.value().data().size(); ++i) {
         weight_.value().data()[i] = distribution(generator);
     }
 }
@@ -31,7 +31,7 @@ Value Linear::forward(const Value& input) const {
     return add_bias(projected, bias_.value());
 }
 
-std::vector<Parameter*> Linear::parameters() noexcept {
+std::vector<Parameter*> Linear::parameters() {
     return {&weight_, &bias_};
 }
 

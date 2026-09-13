@@ -103,7 +103,7 @@ void Value::backward() {
     node_->grad[0] = 1.0;
     for (auto it = order.rbegin(); it != order.rend(); ++it) {
         if ((*it)->backward) {
-            (*it)->backward(*it);
+            (*it)->backward(*(*it));
         }
     }
 }
@@ -179,14 +179,15 @@ Value mean(const Value& input) {
         throw std::invalid_argument("Mean requires a non-empty Tensor");
     }
     auto node = std::make_shared<Value::Node>();
-    node->data = Tensor({1}, std::accumulate(input.node_->data.begin(), input.node_->data.end(), 0.0) / static_cast<double>(input.node_->data.size()));
+    const Tensor& input_data = input.node_->data;
+    node->data = Tensor({1}, std::accumulate(input_data.data(), input_data.data() + input_data.size(), 0.0) / static_cast<double>(input_data.size()));
     node->requires_grad = input.requires_grad();
     node->parents = {input.node_};
     if (node->requires_grad) {
         node->grad = zeros_like(node->data);
     }
     const double scale = 1.0 / static_cast<double>(input.node_->data.size());
-    node->backward = [parent = input.node_](Value::Node& self) {
+    node->backward = [parent = input.node_, scale](Value::Node& self) {
         if (parent->requires_grad) {
             Tensor grad(parent->data.shape(), self.grad[0] * scale);
             add_inplace(parent->grad, grad);
@@ -243,6 +244,7 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
         }
         Tensor grad = probabilities;
         const std::size_t classes = grad.shape()[1];
+        (void)classes;
         for (std::size_t row = 0; row < batch; ++row) {
             grad.at({row, targets[row]}) -= 1.0;
         }

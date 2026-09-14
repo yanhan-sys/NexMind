@@ -505,4 +505,71 @@ Value scaled_dot_product_attention(const Value& query, const Value& key, const V
     return Value(std::move(node));
 }
 
+Value concat_columns(const std::vector<Value>& inputs) {
+    if (inputs.empty()) {
+        throw std::invalid_argument("concat_columns requires at least one input");
+    }
+    if (!inputs.front().node_ || inputs.front().node_->data.ndim() != 2) {
+        throw std::invalid_argument("concat_columns requires 2D inputs");
+    }
+    const std::size_t rows = inputs.front().node_->data.shape()[0];
+    std::size_t total_columns = 0;
+    bool requires_grad = false;
+    for (const auto& input : inputs) {
+        if (!input.node_ || input.node_->data.ndim() != 2 || input.node_->data.shape()[0] != rows) {
+            throw std::invalid_argument("concat_columns input shape mismatch");
+        }
+        total_columns += input.node_->data.shape()[1];
+        requires_grad = requires_grad || input.requires_grad();
+    }
+
+    Tensor output({rows, total_columns}, 0.0);
+    std::size_t column_offset = 0;
+    for (const auto& input : inputs) {
+        const std::size_t columns = input.node_->data.shape()[1];
+        for (std::size_t row = 0; row < rows; ++row) {
+            for (std::size_t column = 0; column < columns; ++column) {
+                output.at({row, column_offset + column}) = input.node_->data.at({row, column});
+            }
+        }
+        column_offset += columns;
+    }
+
+    auto node = std::make_shared<Value::Node>();
+    node->data = std::move(output);
+    node->requires_grad = requires_grad;
+    for (const auto& input : inputs) {
+        node->parents.push_back(input.node_);
+    }
+    if (requires_grad) {
+        node->grad = zeros_like(node->data);
+    }
+    node->backward = [input_nodes = [&inputs]() {
+        std::vector<std::shared_ptr<Value::Node>> nodes;
+        nodes.reserve(inputs.size());
+        for (const auto& input : inputs) {
+            nodes.push_back(input.node_);
+        }
+        return nodes;
+    }()](Value::Node& self) {
+        std::size_t column_offset = 0;
+        for (const auto& input_node : input_nodes) {
+            if (!input_node->requires_grad) {
+                column_offset += input_node->data.shape()[1];
+                continue;
+            }
+            const std::size_t columns = input_node->data.shape()[1];
+            Tensor grad(input_node->data.shape(), 0.0);
+            for (std::size_t row = 0; row < input_node->data.shape()[0]; ++row) {
+                for (std::size_t column = 0; column < columns; ++column) {
+                    grad.at({row, column}) = self.grad.at({row, column_offset + column});
+                }
+            }
+            add_inplace(input_node->grad, grad);
+            column_offset += columns;
+        }
+    };
+    return Value(std::move(node));
+}
+
 } // namespace nexmind

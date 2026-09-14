@@ -28,6 +28,9 @@ public:
 
     std::size_t vocab_size() const noexcept { return vocab_size_; }
     std::size_t embed_dim() const noexcept { return embed_dim_; }
+    std::size_t num_layers() const noexcept { return num_layers_; }
+    std::size_t num_heads() const noexcept { return num_heads_; }
+    std::size_t feed_forward_dim() const noexcept { return feed_forward_dim_; }
     bool causal() const noexcept { return causal_; }
     const Embedding& embedding() const noexcept { return embedding_; }
     const SinusoidalPositionalEncoding& positional_encoding() const noexcept { return positional_encoding_; }
@@ -37,6 +40,9 @@ public:
 private:
     std::size_t vocab_size_;
     std::size_t embed_dim_;
+    std::size_t num_layers_;
+    std::size_t num_heads_;
+    std::size_t feed_forward_dim_;
     bool causal_;
     Embedding embedding_;
     SinusoidalPositionalEncoding positional_encoding_;

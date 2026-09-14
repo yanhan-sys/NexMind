@@ -283,6 +283,35 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
     return Value(std::move(node));
 }
 
+Value relu(const Value& input) {
+    if (!input.node_) {
+        throw std::logic_error("Invalid autograd Value");
+    }
+    auto node = std::make_shared<Value::Node>();
+    node->data = input.node_->data;
+    for (std::size_t i = 0; i < node->data.size(); ++i) {
+        node->data[i] = std::max(0.0, node->data[i]);
+    }
+    node->requires_grad = input.requires_grad();
+    node->parents = {input.node_};
+    if (node->requires_grad) {
+        node->grad = zeros_like(node->data);
+    }
+    node->backward = [parent = input.node_](Value::Node& self) {
+        if (!parent->requires_grad) {
+            return;
+        }
+        Tensor grad(parent->data.shape(), 0.0);
+        for (std::size_t i = 0; i < grad.size(); ++i) {
+            if (parent->data[i] > 0.0) {
+                grad[i] = self.grad[i];
+            }
+        }
+        add_inplace(parent->grad, grad);
+    };
+    return Value(std::move(node));
+}
+
 Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon) {
     if (!input.node_ || !gamma.node_ || !beta.node_ || input.node_->data.ndim() != 2 || gamma.node_->data.shape().size() != 2 || beta.node_->data.shape().size() != 2) {
         throw std::invalid_argument("LayerNorm requires 2D input and parameters");
@@ -357,6 +386,120 @@ Value layer_norm(const Value& input, const Value& gamma, const Value& beta, doub
         }
         if (beta_node->requires_grad) {
             add_inplace(beta_node->grad, beta_grad);
+        }
+    };
+    return Value(std::move(node));
+}
+
+Value scaled_dot_product_attention(const Value& query, const Value& key, const Value& value, double scale) {
+    // 第一版只支持单头、二维序列，先把计算和反向传播做正确。
+    if (!query.node_ || !key.node_ || !value.node_) {
+        throw std::logic_error("Invalid autograd Value");
+    }
+    if (query.node_->data.ndim() != 2 || key.node_->data.ndim() != 2 || value.node_->data.ndim() != 2) {
+        throw std::invalid_argument("Attention requires 2D query, key and value");
+    }
+    const auto& query_shape = query.node_->data.shape();
+    const auto& key_shape = key.node_->data.shape();
+    const auto& value_shape = value.node_->data.shape();
+    if (query_shape[1] != key_shape[1] || key_shape[0] != value_shape[0] || query_shape[1] == 0 || key_shape[0] == 0 || scale <= 0.0) {
+        throw std::invalid_argument("Attention shape or scale mismatch");
+    }
+
+    const std::size_t query_length = query_shape[0];
+    const std::size_t key_length = key_shape[0];
+    const std::size_t key_dim = key_shape[1];
+    const std::size_t value_dim = value_shape[1];
+
+    Tensor probabilities({query_length, key_length}, 0.0);
+    for (std::size_t row = 0; row < query_length; ++row) {
+        double max_score = -std::numeric_limits<double>::infinity();
+        Tensor scores({1, key_length}, 0.0);
+        for (std::size_t column = 0; column < key_length; ++column) {
+            double score_value = 0.0;
+            for (std::size_t feature = 0; feature < key_dim; ++feature) {
+                score_value += query.node_->data.at({row, feature}) * key.node_->data.at({column, feature});
+            }
+            score_value *= scale;
+            scores.at({0, column}) = score_value;
+            max_score = std::max(max_score, score_value);
+        }
+        double sum_exp = 0.0;
+        for (std::size_t column = 0; column < key_length; ++column) {
+            const double value_exp = std::exp(scores.at({0, column}) - max_score);
+            probabilities.at({row, column}) = value_exp;
+            sum_exp += value_exp;
+        }
+        for (std::size_t column = 0; column < key_length; ++column) {
+            probabilities.at({row, column}) /= sum_exp;
+        }
+    }
+
+    Tensor output({query_length, value_dim}, 0.0);
+    for (std::size_t row = 0; row < query_length; ++row) {
+        for (std::size_t column = 0; column < value_dim; ++column) {
+            for (std::size_t source = 0; source < key_length; ++source) {
+                output.at({row, column}) += probabilities.at({row, source}) * value.node_->data.at({source, column});
+            }
+        }
+    }
+
+    auto node = std::make_shared<Value::Node>();
+    node->data = std::move(output);
+    node->requires_grad = query.requires_grad() || key.requires_grad() || value.requires_grad();
+    node->parents = {query.node_, key.node_, value.node_};
+    if (node->requires_grad) {
+        node->grad = zeros_like(node->data);
+    }
+    node->backward = [query_node = query.node_, key_node = key.node_, value_node = value.node_, probabilities = std::move(probabilities), scale](Value::Node& self) {
+        const std::size_t query_length = query_node->data.shape()[0];
+        const std::size_t key_length = key_node->data.shape()[0];
+        const std::size_t key_dim = key_node->data.shape()[1];
+        const std::size_t value_dim = value_node->data.shape()[1];
+        Tensor probability_grad({query_length, key_length}, 0.0);
+        Tensor value_grad(value_node->data.shape(), 0.0);
+
+        // 先计算 dV 和 dP，再通过 softmax 的雅可比矩阵得到 dScore。
+        for (std::size_t row = 0; row < query_length; ++row) {
+            for (std::size_t source = 0; source < key_length; ++source) {
+                for (std::size_t column = 0; column < value_dim; ++column) {
+                    probability_grad.at({row, source}) += self.grad.at({row, column}) * value_node->data.at({source, column});
+                    value_grad.at({source, column}) += probabilities.at({row, source}) * self.grad.at({row, column});
+                }
+            }
+        }
+
+        Tensor score_grad({query_length, key_length}, 0.0);
+        for (std::size_t row = 0; row < query_length; ++row) {
+            double weighted_sum = 0.0;
+            for (std::size_t source = 0; source < key_length; ++source) {
+                weighted_sum += probability_grad.at({row, source}) * probabilities.at({row, source});
+            }
+            for (std::size_t source = 0; source < key_length; ++source) {
+                score_grad.at({row, source}) = probabilities.at({row, source}) * (probability_grad.at({row, source}) - weighted_sum);
+            }
+        }
+
+        Tensor query_grad(query_node->data.shape(), 0.0);
+        Tensor key_grad(key_node->data.shape(), 0.0);
+        for (std::size_t row = 0; row < query_length; ++row) {
+            for (std::size_t source = 0; source < key_length; ++source) {
+                const double score = score_grad.at({row, source}) * scale;
+                for (std::size_t feature = 0; feature < key_dim; ++feature) {
+                    query_grad.at({row, feature}) += score * key_node->data.at({source, feature});
+                    key_grad.at({source, feature}) += score * query_node->data.at({row, feature});
+                }
+            }
+        }
+
+        if (query_node->requires_grad) {
+            add_inplace(query_node->grad, query_grad);
+        }
+        if (key_node->requires_grad) {
+            add_inplace(key_node->grad, key_grad);
+        }
+        if (value_node->requires_grad) {
+            add_inplace(value_node->grad, value_grad);
         }
     };
     return Value(std::move(node));

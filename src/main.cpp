@@ -1,5 +1,6 @@
 #include "checkpoint.h"
 #include "language_model_trainer.h"
+#include "text_dataloader.h"
 #include "text_dataset.h"
 #include "tokenizer.h"
 
@@ -10,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 using namespace nexmind;
@@ -37,7 +39,7 @@ double parse_double(std::string_view value, const char* name) {
 
 void print_usage() {
     std::cout << "NexMind\n"
-              << "  train <text> <checkpoint> [steps] [sequence_length] [embed_dim] [layers] [heads] [ff_dim] [lr]\n"
+              << "  train <text> <checkpoint> [steps] [sequence_length] [embed_dim] [layers] [heads] [ff_dim] [lr] [batch_size]\n"
               << "  generate <checkpoint> <prompt> [max_new_tokens] [temperature]\n";
 }
 
@@ -55,25 +57,27 @@ int train_command(int argc, char** argv) {
     const std::size_t heads = argc > 8 ? parse_size(argv[8], "heads") : 4;
     const std::size_t feed_forward_dim = argc > 9 ? parse_size(argv[9], "ff_dim") : 128;
     const double learning_rate = argc > 10 ? parse_double(argv[10], "learning rate") : 1e-3;
+    const std::size_t batch_size = argc > 11 ? parse_size(argv[11], "batch size") : 4;
 
     // 当前开源第一版采用 ByteTokenizer，因此词表固定为 256 个字节。
     TextDataset dataset = load_text_dataset(text_path, sequence_length);
+    TextDataLoader loader(dataset, batch_size);
     TransformerLanguageModel model(ByteTokenizer::vocabulary_size, embed_dim, layers, heads, feed_forward_dim, 42, true);
     LanguageModelTrainer trainer(model, learning_rate);
 
-    std::vector<std::size_t> inputs;
-    std::vector<std::size_t> targets;
+    std::vector<std::vector<std::size_t>> inputs;
+    std::vector<std::vector<std::size_t>> targets;
     double loss = 0.0;
     for (std::size_t step = 0; step < steps; ++step) {
-        if (!dataset.next(inputs, targets)) {
-            dataset.reset();
-            if (!dataset.next(inputs, targets)) {
+        if (!loader.next(inputs, targets)) {
+            loader.reset();
+            if (!loader.next(inputs, targets)) {
                 throw std::runtime_error("Training dataset contains no samples");
             }
         }
-        loss = trainer.train_step(inputs, targets);
+        loss = trainer.train_batch(inputs, targets);
         if ((step + 1) % 100 == 0 || step + 1 == steps) {
-            std::cout << "step=" << (step + 1) << " loss=" << loss << '\n';
+            std::cout << "step=" << (step + 1) << " loss=" << loss << " batch=" << inputs.size() << '\n';
         }
     }
 

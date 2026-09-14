@@ -7,10 +7,11 @@
 
 namespace nexmind {
 
-MultiHeadAttention::MultiHeadAttention(std::size_t embed_dim, std::size_t num_heads, std::uint64_t seed)
+MultiHeadAttention::MultiHeadAttention(std::size_t embed_dim, std::size_t num_heads, std::uint64_t seed, bool causal)
     : embed_dim_(embed_dim),
       num_heads_(num_heads),
       head_dim_(embed_dim / num_heads),
+      causal_(causal),
       output_projection_(embed_dim, embed_dim, seed + 3000) {
     if (embed_dim == 0 || num_heads == 0 || embed_dim % num_heads != 0) {
         throw std::invalid_argument("MultiHeadAttention dimensions must be positive and divisible");
@@ -28,7 +29,7 @@ MultiHeadAttention::MultiHeadAttention(std::size_t embed_dim, std::size_t num_he
 }
 
 Value MultiHeadAttention::forward(const Value& input) const {
-    // 标准多头自注意力：每个头独立投影到 head_dim，再拼接后做输出投影。
+    // 标准多头自注意力：语言模型模式下启用因果掩码，阻止当前位置看到未来 token。
     if (input.data().ndim() != 2 || input.data().shape()[1] != embed_dim_) {
         throw std::invalid_argument("MultiHeadAttention input shape mismatch");
     }
@@ -40,7 +41,11 @@ Value MultiHeadAttention::forward(const Value& input) const {
         const Value query = query_projections_[head].forward(input);
         const Value key = key_projections_[head].forward(input);
         const Value value = value_projections_[head].forward(input);
-        heads.push_back(scaled_dot_product_attention(query, key, value, scale));
+        if (causal_) {
+            heads.push_back(scaled_dot_product_attention_causal(query, key, value, scale));
+        } else {
+            heads.push_back(scaled_dot_product_attention(query, key, value, scale));
+        }
     }
 
     const Value combined = concat_columns(heads);

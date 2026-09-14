@@ -2,6 +2,7 @@
 
 #include "embedding.h"
 #include "linear.h"
+#include "positional_encoding.h"
 #include "transformer_encoder.h"
 
 #include <cstddef>
@@ -11,7 +12,7 @@
 
 namespace nexmind {
 
-// Decoder-free Transformer Language Model：Token Embedding + Encoder + LM Head。
+// 自回归 Transformer Language Model：Token Embedding + Position Encoding + Causal Transformer + LM Head。
 class TransformerLanguageModel final : public Module {
 public:
     TransformerLanguageModel(std::size_t vocab_size,
@@ -19,21 +20,26 @@ public:
                              std::size_t num_layers,
                              std::size_t num_heads,
                              std::size_t feed_forward_dim,
-                             std::uint64_t seed = 42);
+                             std::uint64_t seed = 42,
+                             bool causal = true);
 
     Value forward(const Value& token_ids) const;
     std::vector<Parameter*> parameters() override;
 
     std::size_t vocab_size() const noexcept { return vocab_size_; }
     std::size_t embed_dim() const noexcept { return embed_dim_; }
+    bool causal() const noexcept { return causal_; }
     const Embedding& embedding() const noexcept { return embedding_; }
+    const SinusoidalPositionalEncoding& positional_encoding() const noexcept { return positional_encoding_; }
     const TransformerEncoder& encoder() const noexcept { return encoder_; }
     const Linear& lm_head() const noexcept { return lm_head_; }
 
 private:
     std::size_t vocab_size_;
     std::size_t embed_dim_;
+    bool causal_;
     Embedding embedding_;
+    SinusoidalPositionalEncoding positional_encoding_;
     TransformerEncoder encoder_;
     Linear lm_head_;
 };

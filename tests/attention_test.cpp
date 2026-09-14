@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 
 int main() {
     // 用三个 token 的小序列验证注意力输出形状和完整反向传播链路。
@@ -18,7 +19,7 @@ int main() {
     assert(output.data().shape()[0] == 3);
     assert(output.data().shape()[1] == 4);
 
-    const nexmind::Value loss = nexmind::mean(output);
+    nexmind::Value loss = nexmind::mean(output);
     loss.backward();
 
     bool input_gradient_nonzero = false;

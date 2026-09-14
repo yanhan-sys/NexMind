@@ -283,4 +283,83 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
     return Value(std::move(node));
 }
 
+Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon) {
+    if (!input.node_ || !gamma.node_ || !beta.node_ || input.node_->data.ndim() != 2 || gamma.node_->data.shape().size() != 2 || beta.node_->data.shape().size() != 2) {
+        throw std::invalid_argument("LayerNorm requires 2D input and parameters");
+    }
+    const auto& input_shape = input.node_->data.shape();
+    const auto& gamma_shape = gamma.node_->data.shape();
+    const auto& beta_shape = beta.node_->data.shape();
+    const std::size_t rows = input_shape[0];
+    const std::size_t features = input_shape[1];
+    if (gamma_shape[0] != 1 || beta_shape[0] != 1 || gamma_shape[1] != features || beta_shape[1] != features || epsilon <= 0.0) {
+        throw std::invalid_argument("LayerNorm shape mismatch");
+    }
+
+    Tensor normalized(input_shape, 0.0);
+    Tensor inverse_std({rows, 1}, 0.0);
+    Tensor output(input_shape, 0.0);
+    for (std::size_t row = 0; row < rows; ++row) {
+        double mean_value = 0.0;
+        for (std::size_t column = 0; column < features; ++column) {
+            mean_value += input.node_->data.at({row, column});
+        }
+        mean_value /= static_cast<double>(features);
+        double variance = 0.0;
+        for (std::size_t column = 0; column < features; ++column) {
+            const double centered = input.node_->data.at({row, column}) - mean_value;
+            variance += centered * centered;
+        }
+        variance /= static_cast<double>(features);
+        const double inv = 1.0 / std::sqrt(variance + epsilon);
+        inverse_std.at({row, 0}) = inv;
+        for (std::size_t column = 0; column < features; ++column) {
+            const double normalized_value = (input.node_->data.at({row, column}) - mean_value) * inv;
+            normalized.at({row, column}) = normalized_value;
+            output.at({row, column}) = normalized_value * gamma.node_->data.at({0, column}) + beta.node_->data.at({0, column});
+        }
+    }
+
+    auto node = std::make_shared<Value::Node>();
+    node->data = std::move(output);
+    node->requires_grad = input.requires_grad() || gamma.requires_grad() || beta.requires_grad();
+    node->parents = {input.node_, gamma.node_, beta.node_};
+    if (node->requires_grad) {
+        node->grad = zeros_like(node->data);
+    }
+    node->backward = [input_node = input.node_, gamma_node = gamma.node_, beta_node = beta.node_, normalized = std::move(normalized), inverse_std = std::move(inverse_std)](Value::Node& self) {
+        const std::size_t rows = input_node->data.shape()[0];
+        const std::size_t features = input_node->data.shape()[1];
+        Tensor input_grad(input_node->data.shape(), 0.0);
+        Tensor gamma_grad(gamma_node->data.shape(), 0.0);
+        Tensor beta_grad(beta_node->data.shape(), 0.0);
+        for (std::size_t row = 0; row < rows; ++row) {
+            double sum_dy = 0.0;
+            double sum_dy_xhat = 0.0;
+            for (std::size_t column = 0; column < features; ++column) {
+                const double dy = self.grad.at({row, column}) * gamma_node->data.at({0, column});
+                sum_dy += dy;
+                sum_dy_xhat += dy * normalized.at({row, column});
+                gamma_grad.at({0, column}) += self.grad.at({row, column}) * normalized.at({row, column});
+                beta_grad.at({0, column}) += self.grad.at({row, column});
+            }
+            const double scale = inverse_std.at({row, 0}) / static_cast<double>(features);
+            for (std::size_t column = 0; column < features; ++column) {
+                const double dy = self.grad.at({row, column}) * gamma_node->data.at({0, column});
+                input_grad.at({row, column}) = scale * (static_cast<double>(features) * dy - sum_dy - normalized.at({row, column}) * sum_dy_xhat);
+            }
+        }
+        if (input_node->requires_grad) {
+            add_inplace(input_node->grad, input_grad);
+        }
+        if (gamma_node->requires_grad) {
+            add_inplace(gamma_node->grad, gamma_grad);
+        }
+        if (beta_node->requires_grad) {
+            add_inplace(beta_node->grad, beta_grad);
+        }
+    };
+    return Value(std::move(node));
+}
+
 } // namespace nexmind

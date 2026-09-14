@@ -47,7 +47,7 @@ Value Embedding::forward(const Value& indices) const {
         for (std::size_t row = 0; row < selected.size(); ++row) {
             const std::size_t offset = selected[row] * embedding_dim;
             for (std::size_t column = 0; column < embedding_dim; ++column) {
-                weight_node->grad[offset + column] += node.grad.at({row, column});
+                weight_node->grad[offset + column] += node.grad[row * embedding_dim + column];
             }
         }
     };

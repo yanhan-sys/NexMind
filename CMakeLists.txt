@@ -19,6 +19,8 @@ add_library(nexmind_core
     src/linear.h
     src/optimizer.cpp
     src/optimizer.h
+    src/trainer.cpp
+    src/trainer.h
     src/relu.cpp
     src/relu.h
     src/mlp.cpp
@@ -77,6 +79,11 @@ if(NEXMIND_BUILD_TESTS)
     target_compile_features(nexmind_optimizer_test PRIVATE cxx_std_20)
     target_compile_options(nexmind_optimizer_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
+    add_executable(nexmind_trainer_test tests/trainer_test.cpp)
+    target_link_libraries(nexmind_trainer_test PRIVATE nexmind_core)
+    target_compile_features(nexmind_trainer_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_trainer_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
     add_executable(nexmind_mlp_test tests/mlp_test.cpp)
     target_link_libraries(nexmind_mlp_test PRIVATE nexmind_core)
     target_compile_features(nexmind_mlp_test PRIVATE cxx_std_20)
@@ -116,6 +123,7 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_autograd COMMAND nexmind_autograd_test)
     add_test(NAME nexmind_linear COMMAND nexmind_linear_test)
     add_test(NAME nexmind_optimizer COMMAND nexmind_optimizer_test)
+    add_test(NAME nexmind_trainer COMMAND nexmind_trainer_test)
     add_test(NAME nexmind_mlp COMMAND nexmind_mlp_test)
     add_test(NAME nexmind_transformer_components COMMAND nexmind_transformer_components_test)
     add_test(NAME nexmind_attention COMMAND nexmind_attention_test)

@@ -48,6 +48,7 @@ private:
     friend class Embedding;
     friend Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon);
     friend Value scaled_dot_product_attention(const Value& query, const Value& key, const Value& value, double scale);
+    friend Value concat_columns(const std::vector<Value>& inputs);
 };
 
 Value add(const Value& lhs, const Value& rhs);
@@ -59,5 +60,6 @@ Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets
 Value relu(const Value& input);
 Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon = 1e-5);
 Value scaled_dot_product_attention(const Value& query, const Value& key, const Value& value, double scale);
+Value concat_columns(const std::vector<Value>& inputs);
 
 } // namespace nexmind

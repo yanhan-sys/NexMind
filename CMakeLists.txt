@@ -19,6 +19,10 @@ add_library(nexmind_core
     src/linear.h
     src/optimizer.cpp
     src/optimizer.h
+    src/relu.cpp
+    src/relu.h
+    src/mlp.cpp
+    src/mlp.h
 )
 
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
@@ -61,9 +65,16 @@ if(NEXMIND_BUILD_TESTS)
     target_link_libraries(nexmind_optimizer_test PRIVATE nexmind_core)
     target_compile_features(nexmind_optimizer_test PRIVATE cxx_std_20)
 
+    add_executable(nexmind_mlp_test
+        tests/mlp_test.cpp
+    )
+    target_link_libraries(nexmind_mlp_test PRIVATE nexmind_core)
+    target_compile_features(nexmind_mlp_test PRIVATE cxx_std_20)
+
     add_test(NAME nexmind_tensor COMMAND nexmind_tensor_test)
     add_test(NAME nexmind_autograd COMMAND nexmind_autograd_test)
     add_test(NAME nexmind_linear COMMAND nexmind_linear_test)
     add_test(NAME nexmind_optimizer COMMAND nexmind_optimizer_test)
+    add_test(NAME nexmind_mlp COMMAND nexmind_mlp_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

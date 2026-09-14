@@ -7,9 +7,10 @@ namespace nexmind {
 TransformerBlock::TransformerBlock(std::size_t embed_dim,
                                    std::size_t num_heads,
                                    std::size_t feed_forward_dim,
-                                   std::uint64_t seed)
+                                   std::uint64_t seed,
+                                   bool causal)
     : attention_norm_(embed_dim),
-      attention_(embed_dim, num_heads, seed),
+      attention_(embed_dim, num_heads, seed, causal),
       feed_forward_norm_(embed_dim),
       feed_forward_(embed_dim, feed_forward_dim, embed_dim, seed + 1) {
     // Transformer Block 的特征维度必须有效，具体整除关系由 MultiHeadAttention 校验。

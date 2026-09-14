@@ -9,7 +9,8 @@ TransformerEncoder::TransformerEncoder(std::size_t num_layers,
                                        std::size_t embed_dim,
                                        std::size_t num_heads,
                                        std::size_t feed_forward_dim,
-                                       std::uint64_t seed) {
+                                       std::uint64_t seed,
+                                       bool causal) {
     // Encoder 至少需要一层 Block，避免空网络产生无意义的前向结果。
     if (num_layers == 0) {
         throw std::invalid_argument("TransformerEncoder requires at least one layer");
@@ -18,7 +19,7 @@ TransformerEncoder::TransformerEncoder(std::size_t num_layers,
     blocks_.reserve(num_layers);
     for (std::size_t index = 0; index < num_layers; ++index) {
         // 每层使用不同随机种子，避免所有层初始化完全相同。
-        blocks_.emplace_back(embed_dim, num_heads, feed_forward_dim, seed + index);
+        blocks_.emplace_back(embed_dim, num_heads, feed_forward_dim, seed + index, causal);
     }
 }
 

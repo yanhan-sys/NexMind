@@ -9,6 +9,8 @@
 
 namespace nexmind {
 
+class Embedding;
+
 class Value {
 public:
     struct Node {
@@ -43,6 +45,8 @@ private:
     friend Value mean(const Value& input);
     friend Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets);
     friend Value relu(const Value& input);
+    friend class Embedding;
+    friend Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon);
 };
 
 Value add(const Value& lhs, const Value& rhs);
@@ -52,5 +56,6 @@ Value matmul(const Value& lhs, const Value& rhs);
 Value mean(const Value& input);
 Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets);
 Value relu(const Value& input);
+Value layer_norm(const Value& input, const Value& gamma, const Value& beta, double epsilon = 1e-5);
 
 } // namespace nexmind

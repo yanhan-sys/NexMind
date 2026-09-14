@@ -29,6 +29,8 @@ add_library(nexmind_core
     src/layer_norm.h
     src/attention.cpp
     src/attention.h
+    src/multi_head_attention.cpp
+    src/multi_head_attention.h
 )
 
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
@@ -84,6 +86,11 @@ if(NEXMIND_BUILD_TESTS)
     target_compile_features(nexmind_attention_test PRIVATE cxx_std_20)
     target_compile_options(nexmind_attention_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
+    add_executable(nexmind_multi_head_attention_test tests/multi_head_attention_test.cpp)
+    target_link_libraries(nexmind_multi_head_attention_test PRIVATE nexmind_core)
+    target_compile_features(nexmind_multi_head_attention_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_multi_head_attention_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
     add_test(NAME nexmind_tensor COMMAND nexmind_tensor_test)
     add_test(NAME nexmind_autograd COMMAND nexmind_autograd_test)
     add_test(NAME nexmind_linear COMMAND nexmind_linear_test)
@@ -91,5 +98,6 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_mlp COMMAND nexmind_mlp_test)
     add_test(NAME nexmind_transformer_components COMMAND nexmind_transformer_components_test)
     add_test(NAME nexmind_attention COMMAND nexmind_attention_test)
+    add_test(NAME nexmind_multi_head_attention COMMAND nexmind_multi_head_attention_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

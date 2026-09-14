@@ -1,6 +1,7 @@
 #include "trainer.h"
 
 #include <stdexcept>
+#include <utility>
 
 namespace nexmind {
 

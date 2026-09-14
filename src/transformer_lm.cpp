@@ -12,11 +12,14 @@ TransformerLanguageModel::TransformerLanguageModel(std::size_t vocab_size,
                                                    std::size_t num_layers,
                                                    std::size_t num_heads,
                                                    std::size_t feed_forward_dim,
-                                                   std::uint64_t seed)
+                                                   std::uint64_t seed,
+                                                   bool causal)
     : vocab_size_(vocab_size),
       embed_dim_(embed_dim),
+      causal_(causal),
       embedding_(vocab_size, embed_dim, seed),
-      encoder_(num_layers, embed_dim, num_heads, feed_forward_dim, seed + 1),
+      positional_encoding_(embed_dim),
+      encoder_(num_layers, embed_dim, num_heads, feed_forward_dim, seed + 1, causal),
       lm_head_(embed_dim, vocab_size, seed + 2) {
     // 词表必须非空，隐藏维度由 Embedding 和 Encoder 保持一致。
     if (vocab_size == 0 || embed_dim == 0) {
@@ -25,9 +28,10 @@ TransformerLanguageModel::TransformerLanguageModel(std::size_t vocab_size,
 }
 
 Value TransformerLanguageModel::forward(const Value& token_ids) const {
-    // Token ID → Embedding → Transformer Encoder → Vocabulary logits。
+    // Token ID → Embedding → Position Encoding → Transformer → Vocabulary logits。
     const Value embedded = embedding_.forward(token_ids);
-    const Value encoded = encoder_.forward(embedded);
+    const Value positioned = positional_encoding_.forward(embedded);
+    const Value encoded = encoder_.forward(positioned);
     return lm_head_.forward(encoded);
 }
 

@@ -10,13 +10,14 @@
 
 namespace nexmind {
 
-// 标准 Transformer Encoder Block：Pre-Norm + 残差连接。
+// 标准 Transformer Block：Pre-Norm + 残差连接，可选择因果注意力模式。
 class TransformerBlock final : public Module {
 public:
     TransformerBlock(std::size_t embed_dim,
                      std::size_t num_heads,
                      std::size_t feed_forward_dim,
-                     std::uint64_t seed = 42);
+                     std::uint64_t seed = 42,
+                     bool causal = false);
 
     Value forward(const Value& input) const;
     std::vector<Parameter*> parameters() override;

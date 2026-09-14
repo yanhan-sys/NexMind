@@ -44,6 +44,12 @@ add_library(nexmind_core
     src/transformer_lm.h
     src/language_model_trainer.cpp
     src/language_model_trainer.h
+    src/tokenizer.cpp
+    src/tokenizer.h
+    src/text_dataset.cpp
+    src/text_dataset.h
+    src/checkpoint.cpp
+    src/checkpoint.h
 )
 
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
@@ -73,6 +79,9 @@ if(NEXMIND_BUILD_TESTS)
     add_executable(nexmind_generation_test tests/generation_test.cpp)
     add_executable(nexmind_causal_attention_test tests/causal_attention_test.cpp)
     add_executable(nexmind_positional_encoding_test tests/positional_encoding_test.cpp)
+    add_executable(nexmind_tokenizer_test tests/tokenizer_test.cpp)
+    add_executable(nexmind_text_dataset_test tests/text_dataset_test.cpp)
+    add_executable(nexmind_checkpoint_test tests/checkpoint_test.cpp)
 
     foreach(test_target
         nexmind_tensor_test
@@ -90,7 +99,10 @@ if(NEXMIND_BUILD_TESTS)
         nexmind_language_model_trainer_test
         nexmind_generation_test
         nexmind_causal_attention_test
-        nexmind_positional_encoding_test)
+        nexmind_positional_encoding_test
+        nexmind_tokenizer_test
+        nexmind_text_dataset_test
+        nexmind_checkpoint_test)
         target_link_libraries(${test_target} PRIVATE nexmind_core)
         target_compile_features(${test_target} PRIVATE cxx_std_20)
         target_compile_options(${test_target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
@@ -112,5 +124,8 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_generation COMMAND nexmind_generation_test)
     add_test(NAME nexmind_causal_attention COMMAND nexmind_causal_attention_test)
     add_test(NAME nexmind_positional_encoding COMMAND nexmind_positional_encoding_test)
+    add_test(NAME nexmind_tokenizer COMMAND nexmind_tokenizer_test)
+    add_test(NAME nexmind_text_dataset COMMAND nexmind_text_dataset_test)
+    add_test(NAME nexmind_checkpoint COMMAND nexmind_checkpoint_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

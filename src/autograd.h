@@ -42,6 +42,7 @@ private:
     friend Value matmul(const Value& lhs, const Value& rhs);
     friend Value mean(const Value& input);
     friend Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets);
+    friend Value relu(const Value& input);
 };
 
 Value add(const Value& lhs, const Value& rhs);
@@ -50,5 +51,6 @@ Value multiply(const Value& lhs, const Value& rhs);
 Value matmul(const Value& lhs, const Value& rhs);
 Value mean(const Value& input);
 Value cross_entropy(const Value& logits, const std::vector<std::size_t>& targets);
+Value relu(const Value& input);
 
 } // namespace nexmind

@@ -1,5 +1,6 @@
 #include "transformer_lm.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -16,6 +17,9 @@ TransformerLanguageModel::TransformerLanguageModel(std::size_t vocab_size,
                                                    bool causal)
     : vocab_size_(vocab_size),
       embed_dim_(embed_dim),
+      num_layers_(num_layers),
+      num_heads_(num_heads),
+      feed_forward_dim_(feed_forward_dim),
       causal_(causal),
       embedding_(vocab_size, embed_dim, seed),
       positional_encoding_(embed_dim),

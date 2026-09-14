@@ -48,6 +48,8 @@ add_library(nexmind_core
     src/tokenizer.h
     src/text_dataset.cpp
     src/text_dataset.h
+    src/text_dataloader.cpp
+    src/text_dataloader.h
     src/checkpoint.cpp
     src/checkpoint.h
 )
@@ -81,6 +83,8 @@ if(NEXMIND_BUILD_TESTS)
     add_executable(nexmind_positional_encoding_test tests/positional_encoding_test.cpp)
     add_executable(nexmind_tokenizer_test tests/tokenizer_test.cpp)
     add_executable(nexmind_text_dataset_test tests/text_dataset_test.cpp)
+    add_executable(nexmind_text_dataloader_test tests/text_dataloader_test.cpp)
+    add_executable(nexmind_language_model_batch_trainer_test tests/language_model_batch_trainer_test.cpp)
     add_executable(nexmind_checkpoint_test tests/checkpoint_test.cpp)
 
     foreach(test_target
@@ -102,6 +106,8 @@ if(NEXMIND_BUILD_TESTS)
         nexmind_positional_encoding_test
         nexmind_tokenizer_test
         nexmind_text_dataset_test
+        nexmind_text_dataloader_test
+        nexmind_language_model_batch_trainer_test
         nexmind_checkpoint_test)
         target_link_libraries(${test_target} PRIVATE nexmind_core)
         target_compile_features(${test_target} PRIVATE cxx_std_20)
@@ -126,6 +132,8 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_positional_encoding COMMAND nexmind_positional_encoding_test)
     add_test(NAME nexmind_tokenizer COMMAND nexmind_tokenizer_test)
     add_test(NAME nexmind_text_dataset COMMAND nexmind_text_dataset_test)
+    add_test(NAME nexmind_text_dataloader COMMAND nexmind_text_dataloader_test)
+    add_test(NAME nexmind_language_model_batch_trainer COMMAND nexmind_language_model_batch_trainer_test)
     add_test(NAME nexmind_checkpoint COMMAND nexmind_checkpoint_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <stdexcept>
+#include <utility>
 
 namespace nexmind {
 

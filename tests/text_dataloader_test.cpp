@@ -24,12 +24,13 @@ int main() {
     assert(loader.next(inputs, targets));
     assert(inputs.size() == 2);
     assert(inputs[0] == std::vector<std::size_t>({2, 3}));
+    assert(targets[0] == std::vector<std::size_t>({3, 4}));
     assert(inputs[1] == std::vector<std::size_t>({3, 4}));
+    assert(targets[1] == std::vector<std::size_t>({4, 5}));
 
-    assert(loader.next(inputs, targets));
-    assert(inputs.size() == 1);
-    assert(inputs[0] == std::vector<std::size_t>({4, 5}));
-    assert(targets[0] == std::vector<std::size_t>({5, 0}) || targets[0] == std::vector<std::size_t>({5}));
+    assert(!loader.next(inputs, targets));
+    assert(inputs.empty());
+    assert(targets.empty());
 
     loader.reset();
     assert(loader.next(inputs, targets));

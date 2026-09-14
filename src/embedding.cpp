@@ -35,7 +35,7 @@ Value Embedding::forward(const Value& indices) const {
         }
         selected[row] = index;
         for (std::size_t column = 0; column < embedding_dim_; ++column) {
-            output.at({row, column}) = weight_.value().data().at(index * embedding_dim_ + column);
+            output.at({row, column}) = weight_.value().data()[index * embedding_dim_ + column];
         }
     }
 

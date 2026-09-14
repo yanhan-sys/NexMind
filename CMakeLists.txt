@@ -12,6 +12,7 @@ add_library(nexmind_core
     src/tensor.h
     src/autograd.cpp
     src/autograd.h
+    src/causal_attention.cpp
     src/parameter.cpp
     src/parameter.h
     src/module.h
@@ -27,6 +28,8 @@ add_library(nexmind_core
     src/mlp.h
     src/embedding.cpp
     src/embedding.h
+    src/positional_encoding.cpp
+    src/positional_encoding.h
     src/layer_norm.cpp
     src/layer_norm.h
     src/attention.cpp

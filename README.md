@@ -2,36 +2,101 @@
 
 NexMind is an open-source project for building a trainable Mini Transformer and evolving LLM infrastructure from scratch in modern C++.
 
-## Project goals
+## What works now
 
-- Build a real trainable Transformer in C++, not a Python wrapper.
-- Start with a small CPU implementation that is easy to understand, test, debug, and extend.
-- Implement the core training path end to end: tensor operations, tokenizer, attention, Transformer blocks, loss, backpropagation, optimizer, checkpointing, and text generation.
-- Evolve the same codebase toward SIMD, CUDA, FP16/BF16, efficient attention, larger models, inference optimization, and distributed training.
+- C++20 CPU tensor and autograd engine
+- Linear, ReLU, MLP, LayerNorm and Adam optimizer
+- Embedding and sinusoidal positional encoding
+- Multi-head self-attention with causal masking
+- Pre-Norm Transformer blocks and stacked Transformer encoder
+- Autoregressive Transformer language model
+- Next-token language-model training
+- UTF-8 byte tokenizer with a fixed 256-token vocabulary
+- Sequential text dataset for fixed-length next-token samples
+- Binary model checkpoint save/load
+- Greedy and temperature text generation
+- `train` and `generate` command-line entry points
+- Automated CTest coverage for the core training and inference path
+
+## Quick start
+
+Build with any C++20 compiler and CMake 3.20+.
+
+Train a small model directly from a UTF-8 text file:
+
+```text
+nexmind train data.txt model.nxm 1000 64 64 2 4 128 0.001
+```
+
+Arguments after the checkpoint are optional:
+
+```text
+steps sequence_length embed_dim layers heads feed_forward_dim learning_rate
+```
+
+Generate text from a saved checkpoint:
+
+```text
+nexmind generate model.nxm "Once upon a time" 128 0.8
+```
+
+Use temperature `0` or omit it for deterministic greedy generation.
+
+## Architecture
+
+```text
+UTF-8 text
+   ↓
+ByteTokenizer
+   ↓
+Token IDs
+   ↓
+Embedding + Sinusoidal Position Encoding
+   ↓
+Causal Transformer
+   ├─ LayerNorm
+   ├─ Multi-Head Causal Self-Attention
+   ├─ Residual
+   ├─ LayerNorm
+   ├─ MLP
+   └─ Residual
+   ↓
+LM Head
+   ↓
+Cross Entropy
+   ↓
+Autograd → Adam
+   ↓
+Checkpoint
+   ↓
+Text Generation
+```
 
 ## Engineering principles
 
 1. Correctness before performance.
 2. A feature is not complete until it builds, runs, and has tests.
-3. Prefer explicit C++ implementations over opaque framework magic during the learning stage.
+3. Prefer explicit C++ implementations over opaque framework magic during the reference stage.
 4. Keep dependencies small and document every external dependency and license.
-5. Preserve a clean separation between model, data, training, inference, and platform acceleration layers.
+5. Keep model, data, training, checkpointing, and inference responsibilities separated.
 6. Do not commit credentials, API keys, private datasets, model secrets, or other sensitive material.
 
-## Initial target
+## Current limitations
 
-The first milestone is a C++17 CPU Mini Transformer that can tokenize training text, run a causal Transformer forward pass, calculate language-model loss, perform backward propagation, update parameters with Adam/AdamW, save and load checkpoints, generate text from a prompt, and run automated tests with CTest.
+This is a CPU reference implementation intended for learning, validation, and small experiments. It does not yet provide GPU acceleration, packed tensor kernels, mixed precision, distributed training, batched data loading, AdamW, or a subword tokenizer.
 
-GPU acceleration and larger-scale training come only after the CPU reference implementation is correct.
+The byte tokenizer is deliberately simple: UTF-8 is preserved as raw bytes, so the vocabulary is fixed at 256 entries. This makes the end-to-end training path dependency-free and easy to inspect.
 
-## Repository
+## Development
 
 The default development branch is `main`.
+
+Run the test suite with CTest after configuring the build:
+
+```text
+ctest --test-dir build -C Release --output-on-failure
+```
 
 ## License
 
 NexMind is released under the Apache License 2.0. See [LICENSE](LICENSE).
-
-## Status
-
-Early development. The repository foundation is being established before implementation of the Mini Transformer core.

@@ -39,6 +39,8 @@ add_library(nexmind_core
     src/transformer_encoder.h
     src/transformer_lm.cpp
     src/transformer_lm.h
+    src/language_model_trainer.cpp
+    src/language_model_trainer.h
 )
 
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
@@ -119,6 +121,11 @@ if(NEXMIND_BUILD_TESTS)
     target_compile_features(nexmind_transformer_lm_test PRIVATE cxx_std_20)
     target_compile_options(nexmind_transformer_lm_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
+    add_executable(nexmind_language_model_trainer_test tests/language_model_trainer_test.cpp)
+    target_link_libraries(nexmind_language_model_trainer_test PRIVATE nexmind_core)
+    target_compile_features(nexmind_language_model_trainer_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_language_model_trainer_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
     add_test(NAME nexmind_tensor COMMAND nexmind_tensor_test)
     add_test(NAME nexmind_autograd COMMAND nexmind_autograd_test)
     add_test(NAME nexmind_linear COMMAND nexmind_linear_test)
@@ -131,5 +138,6 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_transformer_block COMMAND nexmind_transformer_block_test)
     add_test(NAME nexmind_transformer_encoder COMMAND nexmind_transformer_encoder_test)
     add_test(NAME nexmind_transformer_lm COMMAND nexmind_transformer_lm_test)
+    add_test(NAME nexmind_language_model_trainer COMMAND nexmind_language_model_trainer_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

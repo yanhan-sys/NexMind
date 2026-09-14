@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
 #include <vector>
 
 namespace nexmind {
@@ -36,5 +37,17 @@ private:
     TransformerEncoder encoder_;
     Linear lm_head_;
 };
+
+// Greedy：每一步选择当前 logits 中概率最大的 token。
+std::vector<std::size_t> generate_greedy(const TransformerLanguageModel& model,
+                                         std::vector<std::size_t> tokens,
+                                         std::size_t max_new_tokens);
+
+// Temperature sampling：根据温度缩放后的 softmax 概率随机采样 token。
+std::vector<std::size_t> generate_temperature(const TransformerLanguageModel& model,
+                                              std::vector<std::size_t> tokens,
+                                              std::size_t max_new_tokens,
+                                              double temperature,
+                                              std::uint64_t seed = 42);
 
 } // namespace nexmind

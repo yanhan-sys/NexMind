@@ -32,6 +32,7 @@ add_library(nexmind_core
 )
 
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
+target_compile_options(nexmind_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
 target_include_directories(nexmind_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -43,6 +44,7 @@ add_executable(nexmind
 
 target_link_libraries(nexmind PRIVATE nexmind_core)
 target_compile_features(nexmind PRIVATE cxx_std_20)
+target_compile_options(nexmind PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
 if(NEXMIND_BUILD_TESTS)
     enable_testing()
@@ -50,30 +52,37 @@ if(NEXMIND_BUILD_TESTS)
     add_executable(nexmind_tensor_test tests/tensor_test.cpp)
     target_link_libraries(nexmind_tensor_test PRIVATE nexmind_core)
     target_compile_features(nexmind_tensor_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_tensor_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_autograd_test tests/autograd_test.cpp)
     target_link_libraries(nexmind_autograd_test PRIVATE nexmind_core)
     target_compile_features(nexmind_autograd_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_autograd_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_linear_test tests/linear_test.cpp)
     target_link_libraries(nexmind_linear_test PRIVATE nexmind_core)
     target_compile_features(nexmind_linear_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_linear_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_optimizer_test tests/optimizer_test.cpp)
     target_link_libraries(nexmind_optimizer_test PRIVATE nexmind_core)
     target_compile_features(nexmind_optimizer_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_optimizer_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_mlp_test tests/mlp_test.cpp)
     target_link_libraries(nexmind_mlp_test PRIVATE nexmind_core)
     target_compile_features(nexmind_mlp_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_mlp_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_transformer_components_test tests/transformer_components_test.cpp)
     target_link_libraries(nexmind_transformer_components_test PRIVATE nexmind_core)
     target_compile_features(nexmind_transformer_components_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_transformer_components_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_executable(nexmind_attention_test tests/attention_test.cpp)
     target_link_libraries(nexmind_attention_test PRIVATE nexmind_core)
     target_compile_features(nexmind_attention_test PRIVATE cxx_std_20)
+    target_compile_options(nexmind_attention_test PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
     add_test(NAME nexmind_tensor COMMAND nexmind_tensor_test)
     add_test(NAME nexmind_autograd COMMAND nexmind_autograd_test)

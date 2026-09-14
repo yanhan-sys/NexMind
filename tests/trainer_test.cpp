@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 using namespace nexmind;
 
@@ -39,7 +40,8 @@ int main() {
 
         const auto make_loss = [&]() {
             const Value prediction = model.forward(inputs);
-            const Value error = multiply(add(prediction, multiply(targets, Value(Tensor({4, 1}, 2.0), false))), Value(Tensor({4, 1}, 0.5), false));
+            const Value negative_targets = multiply(targets, Value(Tensor({4, 1}, -1.0), false));
+            const Value error = add(prediction, negative_targets);
             return mean(multiply(error, error));
         };
 

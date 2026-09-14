@@ -30,7 +30,7 @@ int main() {
         expect(output.data().shape() == std::vector<std::size_t>({3, 8}), "Transformer Block output shape mismatch");
         expect(block.parameters().size() == 22, "Transformer Block parameter count mismatch");
 
-        const Value loss = mean(output);
+        Value loss = mean(output);
         loss.backward();
 
         bool parameter_gradient_found = false;

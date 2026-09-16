@@ -31,14 +31,14 @@ cbuffer MatmulParams : register(b0) {
     uint reserved;
 };
 
-groupshared double tile_a[8][16];
-groupshared double tile_b[16][8];
+groupshared double tile_a[16][16];
+groupshared double tile_b[16][16];
 
 [numthreads(8, 8, 1)]
 void main(uint3 group_id : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID) {
-    const uint row0 = group_id.y * 8 + group_thread_id.y * 2;
+    const uint row0 = group_id.y * 16 + group_thread_id.y * 2;
     const uint row1 = row0 + 1;
-    const uint column0 = group_id.x * 8 + group_thread_id.x * 2;
+    const uint column0 = group_id.x * 16 + group_thread_id.x * 2;
     const uint column1 = column0 + 1;
     double sum00 = 0.0;
     double sum01 = 0.0;
@@ -51,37 +51,40 @@ void main(uint3 group_id : SV_GroupID, uint3 group_thread_id : SV_GroupThreadID)
         const uint a_column1 = a_column0 + 1;
         const uint b_row0 = tile * 16 + group_thread_id.y * 2;
         const uint b_row1 = b_row0 + 1;
+        const uint local_row0 = group_thread_id.y * 2;
+        const uint local_row1 = local_row0 + 1;
+        const uint local_column0 = group_thread_id.x * 2;
+        const uint local_column1 = local_column0 + 1;
 
-        tile_a[group_thread_id.y][group_thread_id.x * 2] =
+        tile_a[local_row0][local_column0] =
             (row0 < rows && a_column0 < inner) ? A[row0 * inner + a_column0] : 0.0;
-        tile_a[group_thread_id.y][group_thread_id.x * 2 + 1] =
+        tile_a[local_row0][local_column1] =
             (row0 < rows && a_column1 < inner) ? A[row0 * inner + a_column1] : 0.0;
-        tile_b[group_thread_id.y * 2][group_thread_id.x] =
+        tile_a[local_row1][local_column0] =
+            (row1 < rows && a_column0 < inner) ? A[row1 * inner + a_column0] : 0.0;
+        tile_a[local_row1][local_column1] =
+            (row1 < rows && a_column1 < inner) ? A[row1 * inner + a_column1] : 0.0;
+
+        tile_b[local_row0][local_column0] =
             (b_row0 < inner && column0 < columns) ? B[b_row0 * columns + column0] : 0.0;
-        tile_b[group_thread_id.y * 2 + 1][group_thread_id.x] =
+        tile_b[local_row0][local_column1] =
+            (b_row0 < inner && column1 < columns) ? B[b_row0 * columns + column1] : 0.0;
+        tile_b[local_row1][local_column0] =
             (b_row1 < inner && column0 < columns) ? B[b_row1 * columns + column0] : 0.0;
+        tile_b[local_row1][local_column1] =
+            (b_row1 < inner && column1 < columns) ? B[b_row1 * columns + column1] : 0.0;
 
         GroupMemoryBarrierWithGroupSync();
 
         for (uint k = 0; k < 16; ++k) {
-            const double a0 = tile_a[group_thread_id.y][k];
-            const double b0 = tile_b[k][group_thread_id.x];
-            const double a1 = (row1 < rows) ?
-                ((k < 16) ? tile_a[group_thread_id.y][k] : 0.0) : 0.0;
+            const double a0 = tile_a[local_row0][k];
+            const double a1 = tile_a[local_row1][k];
+            const double b0 = tile_b[k][local_column0];
+            const double b1 = tile_b[k][local_column1];
             sum00 += a0 * b0;
-        }
-
-        // 第二输出列和第二输出行使用独立加载，保持边界判断在最终写回阶段。
-        for (uint k = 0; k < 16; ++k) {
-            const double a = tile_a[group_thread_id.y][k];
-            const double b = tile_b[k][group_thread_id.x];
-            sum01 += a * b;
-            if (row1 < rows) {
-                sum10 += a * b;
-            }
-            if (column1 < columns) {
-                sum11 += a * b;
-            }
+            sum01 += a0 * b1;
+            sum10 += a1 * b0;
+            sum11 += a1 * b1;
         }
 
         GroupMemoryBarrierWithGroupSync();
@@ -413,8 +416,8 @@ bool gpu_matmul(const double* lhs,
     s.context->CSSetShaderResources(0, 2, srvs);
     s.context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
     s.context->CSSetConstantBuffers(0, 1, constant_buffers);
-    s.context->Dispatch(static_cast<UINT>((columns + 7) / 8),
-                        static_cast<UINT>((rows + 7) / 8),
+    s.context->Dispatch(static_cast<UINT>((columns + 15) / 16),
+                        static_cast<UINT>((rows + 15) / 16),
                         1);
 
     s.context->CopyResource(s.readback, s.c);

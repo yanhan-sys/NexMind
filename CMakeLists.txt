@@ -7,6 +7,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(NEXMIND_BUILD_TESTS "Build NexMind tests" ON)
 
+find_package(OpenMP REQUIRED)
+
 add_library(nexmind_core
     src/tensor.cpp
     src/tensor.h
@@ -57,6 +59,7 @@ add_library(nexmind_core
 target_compile_features(nexmind_core PUBLIC cxx_std_20)
 target_compile_options(nexmind_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 target_include_directories(nexmind_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(nexmind_core PUBLIC OpenMP::OpenMP_CXX)
 
 add_executable(nexmind src/main.cpp)
 target_link_libraries(nexmind PRIVATE nexmind_core)

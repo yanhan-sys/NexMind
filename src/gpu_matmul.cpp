@@ -72,17 +72,14 @@ GpuState& state() {
     std::call_once(flag, [] {
         auto& s = value;
         D3D_FEATURE_LEVEL feature_level = D3D_FEATURE_LEVEL_11_0;
-        const D3D_FEATURE_LEVEL levels[] = {
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0
-        };
+        const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_0};
 
         HRESULT hr = D3D11CreateDevice(nullptr,
                                        D3D_DRIVER_TYPE_HARDWARE,
                                        nullptr,
                                        0,
                                        levels,
-                                       2,
+                                       1,
                                        D3D11_SDK_VERSION,
                                        &s.device,
                                        &feature_level,
@@ -146,6 +143,11 @@ GpuState& state() {
         s.available = true;
     });
     return value;
+}
+
+std::mutex& execution_mutex() {
+    static std::mutex mutex;
+    return mutex;
 }
 
 bool create_input_buffer(ID3D11Device* device,
@@ -249,6 +251,7 @@ bool gpu_matmul(const double* lhs,
         return false;
     }
 
+    std::lock_guard<std::mutex> lock(execution_mutex());
     auto& s = state();
     ID3D11Buffer* a = nullptr;
     ID3D11Buffer* b = nullptr;

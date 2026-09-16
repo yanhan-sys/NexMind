@@ -12,6 +12,8 @@ find_package(OpenMP REQUIRED)
 add_library(nexmind_core
     src/tensor.cpp
     src/tensor.h
+    src/gpu_matmul.cpp
+    src/gpu_matmul.h
     src/autograd.cpp
     src/autograd.h
     src/causal_attention.cpp
@@ -61,6 +63,10 @@ target_compile_options(nexmind_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 target_include_directories(nexmind_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(nexmind_core PUBLIC OpenMP::OpenMP_CXX)
 
+if(WIN32)
+    target_link_libraries(nexmind_core PUBLIC d3d11 d3dcompiler)
+endif()
+
 add_executable(nexmind src/main.cpp)
 target_link_libraries(nexmind PRIVATE nexmind_core)
 target_compile_features(nexmind PRIVATE cxx_std_20)
@@ -89,6 +95,7 @@ if(NEXMIND_BUILD_TESTS)
     add_executable(nexmind_text_dataloader_test tests/text_dataloader_test.cpp)
     add_executable(nexmind_language_model_batch_trainer_test tests/language_model_batch_trainer_test.cpp)
     add_executable(nexmind_checkpoint_test tests/checkpoint_test.cpp)
+    add_executable(nexmind_gpu_matmul_test tests/gpu_matmul_test.cpp)
 
     foreach(test_target
         nexmind_tensor_test
@@ -111,7 +118,8 @@ if(NEXMIND_BUILD_TESTS)
         nexmind_text_dataset_test
         nexmind_text_dataloader_test
         nexmind_language_model_batch_trainer_test
-        nexmind_checkpoint_test)
+        nexmind_checkpoint_test
+        nexmind_gpu_matmul_test)
         target_link_libraries(${test_target} PRIVATE nexmind_core)
         target_compile_features(${test_target} PRIVATE cxx_std_20)
         target_compile_options(${test_target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
@@ -138,5 +146,6 @@ if(NEXMIND_BUILD_TESTS)
     add_test(NAME nexmind_text_dataloader COMMAND nexmind_text_dataloader_test)
     add_test(NAME nexmind_language_model_batch_trainer COMMAND nexmind_language_model_batch_trainer_test)
     add_test(NAME nexmind_checkpoint COMMAND nexmind_checkpoint_test)
+    add_test(NAME nexmind_gpu_matmul COMMAND nexmind_gpu_matmul_test)
     add_test(NAME nexmind_smoke COMMAND nexmind)
 endif()

@@ -1,4 +1,5 @@
 #include "tensor.h"
+#include "gpu_matmul.h"
 
 #include <algorithm>
 #include <limits>
@@ -107,6 +108,13 @@ Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
     const std::size_t inner = lhs.shape()[1];
     const std::size_t columns = rhs.shape()[1];
     Tensor result({rows, columns}, 0.0);
+
+    // 大矩阵优先尝试 GPU；GPU 不可用或执行失败时自动回退 CPU。
+    if (rows * inner * columns >= 262144 &&
+        gpu_matmul(lhs.data(), rhs.data(), result.data(), rows, inner, columns)) {
+        return result;
+    }
+
     #pragma omp parallel for if(rows * inner * columns >= 16384)
     for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(rows); ++i) {
         for (std::size_t k = 0; k < inner; ++k) {

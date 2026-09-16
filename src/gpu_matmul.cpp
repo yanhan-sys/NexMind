@@ -6,6 +6,7 @@
 #include <d3dcompiler.h>
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <mutex>
 #include <string>

@@ -11,9 +11,10 @@ int main() {
         return 0;
     }
 
-    constexpr std::size_t rows = 8;
-    constexpr std::size_t inner = 8;
-    constexpr std::size_t columns = 8;
+    // 使用非 16 对齐尺寸，覆盖 tile 边界和补零路径。
+    constexpr std::size_t rows = 65;
+    constexpr std::size_t inner = 67;
+    constexpr std::size_t columns = 63;
     std::vector<double> lhs(rows * inner);
     std::vector<double> rhs(inner * columns);
     std::vector<double> result(rows * columns, 0.0);

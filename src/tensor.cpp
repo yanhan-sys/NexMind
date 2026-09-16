@@ -66,8 +66,9 @@ Tensor add(const Tensor& lhs, const Tensor& rhs) {
         throw std::invalid_argument("Tensor add shape mismatch");
     }
     Tensor result(lhs.shape());
-    for (std::size_t i = 0; i < lhs.size(); ++i) {
-        result[i] = lhs[i] + rhs[i];
+    #pragma omp parallel for if(lhs.size() >= 4096)
+    for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(lhs.size()); ++i) {
+        result[static_cast<std::size_t>(i)] = lhs[static_cast<std::size_t>(i)] + rhs[static_cast<std::size_t>(i)];
     }
     return result;
 }
@@ -77,9 +78,10 @@ Tensor add_row_bias(const Tensor& input, const Tensor& bias) {
         throw std::invalid_argument("Tensor row bias shape mismatch");
     }
     Tensor result(input.shape());
-    for (std::size_t row = 0; row < input.shape()[0]; ++row) {
+    #pragma omp parallel for if(input.size() >= 4096)
+    for (std::ptrdiff_t row = 0; row < static_cast<std::ptrdiff_t>(input.shape()[0]); ++row) {
         for (std::size_t column = 0; column < input.shape()[1]; ++column) {
-            result.at({row, column}) = input.at({row, column}) + bias.at({0, column});
+            result.at({static_cast<std::size_t>(row), column}) = input.at({static_cast<std::size_t>(row), column}) + bias.at({0, column});
         }
     }
     return result;
@@ -90,8 +92,9 @@ Tensor multiply(const Tensor& lhs, const Tensor& rhs) {
         throw std::invalid_argument("Tensor multiply shape mismatch");
     }
     Tensor result(lhs.shape());
-    for (std::size_t i = 0; i < lhs.size(); ++i) {
-        result[i] = lhs[i] * rhs[i];
+    #pragma omp parallel for if(lhs.size() >= 4096)
+    for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(lhs.size()); ++i) {
+        result[static_cast<std::size_t>(i)] = lhs[static_cast<std::size_t>(i)] * rhs[static_cast<std::size_t>(i)];
     }
     return result;
 }
@@ -104,11 +107,12 @@ Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
     const std::size_t inner = lhs.shape()[1];
     const std::size_t columns = rhs.shape()[1];
     Tensor result({rows, columns}, 0.0);
-    for (std::size_t i = 0; i < rows; ++i) {
+    #pragma omp parallel for if(rows * inner * columns >= 16384)
+    for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(rows); ++i) {
         for (std::size_t k = 0; k < inner; ++k) {
-            const double value = lhs.at({i, k});
+            const double value = lhs.at({static_cast<std::size_t>(i), k});
             for (std::size_t j = 0; j < columns; ++j) {
-                result.at({i, j}) += value * rhs.at({k, j});
+                result.at({static_cast<std::size_t>(i), j}) += value * rhs.at({k, j});
             }
         }
     }
@@ -120,9 +124,10 @@ Tensor transpose_2d(const Tensor& input) {
         throw std::invalid_argument("Tensor transpose requires a 2D tensor");
     }
     Tensor result({input.shape()[1], input.shape()[0]});
-    for (std::size_t i = 0; i < input.shape()[0]; ++i) {
+    #pragma omp parallel for if(input.size() >= 4096)
+    for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(input.shape()[0]); ++i) {
         for (std::size_t j = 0; j < input.shape()[1]; ++j) {
-            result.at({j, i}) = input.at({i, j});
+            result.at({j, static_cast<std::size_t>(i)}) = input.at({static_cast<std::size_t>(i), j});
         }
     }
     return result;
